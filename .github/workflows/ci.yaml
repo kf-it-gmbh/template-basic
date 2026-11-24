@@ -20,7 +20,12 @@ jobs:
         run: npm install --no-package-lock @commitlint/cli@17 @commitlint/config-conventional@17
       - if: github.event_name == 'pull_request'
         name: commitlint (pr)
-        run: npx commitlint -V --from HEAD~${{ github.event.pull_request.commits }}
+        # Lint exactly the PR's commits. HEAD is the synthetic merge commit, so HEAD~N would walk
+        # main's first-parent history instead (and fail outright when main is shorter than N).
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx commitlint -V --from "$BASE_SHA" --to "$HEAD_SHA"
       - if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags')
         name: commitlint (push)
         # Prefer github.event.before so multi-commit pushes are all checked; if that ref is gone
